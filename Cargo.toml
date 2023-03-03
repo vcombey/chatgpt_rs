@@ -25,6 +25,7 @@ thiserror = "1.0.31"
 futures-util = "^0.3.21"
 bytes = "^1.1.0"
 eventsource-stream = "0.2.3"
+json_value_merge = "1.1.2"
 
 [dev-dependencies]
 tokio = { version = "1.23.0", features = ["macros", "rt-multi-thread"] }

@@ -1,6 +1,6 @@
 use std::str::FromStr;
-
-use crate::types::{ChatCompletionChunk, ConversationResponse, Message, ResponsePart};
+use json_value_merge::Merge;
+use crate::types::{ChatCompletionChunk, ConversationResponse, Message, CompletionOptions,ResponsePart};
 use eventsource_stream::{EventStream, Eventsource};
 use futures_util::Stream;
 use futures_util::StreamExt;
@@ -79,8 +79,8 @@ impl ChatGPT {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn send_message<S: Into<Vec<Message>>>(&self, message: S) -> crate::Result<String> {
-        self.send_message_full(message)
+    pub async fn send_message<S: Into<Vec<Message>>>(&self, message: S, options: CompletionOptions) -> crate::Result<String> {
+        self.send_message_full(message, options)
             .await
             .map(|value| value.choices[0].message.content.to_owned())
     }
@@ -110,12 +110,15 @@ impl ChatGPT {
     pub async fn send_message_full<S: Into<Vec<Message>>>(
         &self,
         message: S,
+		options: CompletionOptions,
     ) -> crate::Result<ConversationResponse> {
         let message = message.into();
-        let body = json!({
+		let options_json = serde_json::to_value(options)?;
+        let mut params = json!({
             "model": "gpt-3.5-turbo",
             "messages": message,
         });
+		let body = params.merge(options_json);
         let resp = self
             .client
             .request(Method::POST, self.options.backend_api_url.clone())
