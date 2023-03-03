@@ -1,11 +1,11 @@
 [package]
-name = "chatgpt_rs"
+name = "chatgpt_using_official_api"
 version = "0.6.0"
 edition = "2021"
 description = "ChatGPT API Wrapper"
-authors = ["Maxuss <maxus.info.mail@proton.me>"]
+authors = ["Vincent <vincent.combey@gmail.com>"]
 license = "MIT"
-repository = "https://github.com/Maxuss/chatgpt_rs"
+repository = "https://github.com/vcombey/chatgpt_rs"
 keywords = ["ChatGPT", "OpenAI"]
 categories = ["api-bindings"]
 
