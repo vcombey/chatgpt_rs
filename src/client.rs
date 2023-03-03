@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
-use crate::converse::ChatConversation;
-use crate::types::{ConversationResponse, ResponsePart, SessionRefresh};
+use crate::types::{ChatCompletionChunk, ConversationResponse, Message, ResponsePart};
 use eventsource_stream::{EventStream, Eventsource};
 use futures_util::Stream;
 use futures_util::StreamExt;
@@ -15,27 +14,13 @@ use uuid::Uuid;
 /// Options for the ChatGPT client
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct ClientOptions {
-    api_url: Url,
     backend_api_url: Url,
-    user_agent: String,
 }
 
 impl ClientOptions {
-    /// Sets the default API url. Default URL is https://chat.openai.com/api
-    pub fn with_api_url(mut self, url: Url) -> Self {
-        self.api_url = url;
-        self
-    }
-
     /// Sets the default backend API url. This is different from [`Self::with_api_url`] and defaults to https://chat.openai.com/backend-api
     pub fn with_backend_api_url(mut self, backend_url: Url) -> Self {
         self.backend_api_url = backend_url;
-        self
-    }
-
-    /// Sets the user agent for the client. Note that the API seems to filter out most of user agents except for default browser ones.
-    pub fn with_user_agent<S: Into<String>>(mut self, user_agent: S) -> Self {
-        self.user_agent = user_agent.into();
         self
     }
 }
@@ -43,9 +28,7 @@ impl ClientOptions {
 impl Default for ClientOptions {
     fn default() -> Self {
         Self {
-            api_url: Url::from_str("https://chat.openai.com/api/").unwrap(),
-            backend_api_url: Url::from_str("https://chat.openai.com/backend-api/").unwrap(),
-            user_agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36".into(),
+            backend_api_url: Url::from_str("https://api.openai.com/v1/chat/completions").unwrap(),
         }
     }
 }
@@ -55,7 +38,7 @@ impl Default for ClientOptions {
 pub struct ChatGPT {
     client: reqwest::Client,
     options: ClientOptions,
-    access_token: String,
+    api_key: String,
 }
 
 impl ChatGPT {
@@ -67,50 +50,12 @@ impl ChatGPT {
     /// Constructs a new ChatGPT client with the specified client options
     pub fn with_options<S: Into<String>>(token: S, options: ClientOptions) -> crate::Result<Self> {
         let token = token.into();
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            USER_AGENT,
-            HeaderValue::from_bytes(options.user_agent.as_bytes())?,
-        );
-        let client = reqwest::ClientBuilder::new()
-            .default_headers(headers)
-            .build()?;
+        let client = reqwest::ClientBuilder::new().build()?;
         Ok(Self {
             client,
             options,
-            access_token: token,
+            api_key: token,
         })
-    }
-
-    /// Refresh the access token. It is recommended to run this command after creating the client
-    pub async fn refresh_token(&mut self) -> crate::Result<String> {
-        let refresh = self
-            .client
-            .get(
-                self.options
-                    .api_url
-                    .join("auth/session")
-                    .map_err(|err| crate::err::Error::ParsingError(err.to_string()))?,
-            )
-            .header("Authorization", format!("Bearer {}", self.access_token))
-            .header(
-                "Cookie",
-                format!("__Secure-next-auth.session-token={}", self.access_token),
-            )
-            .send()
-            .await?
-            .json::<SessionRefresh>()
-            .await;
-        match refresh {
-            Ok(refresh) => {
-                self.access_token = refresh.access_token.clone();
-                Ok(refresh.access_token)
-            }
-            Err(_) => {
-                // the previous access token is valid
-                Ok(self.access_token.clone())
-            }
-        }
     }
 
     /// Sends a messages and gets ChatGPT response.
@@ -131,10 +76,10 @@ impl ChatGPT {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn send_message<S: Into<String>>(&self, message: S) -> crate::Result<String> {
-        self.send_message_full(None, None, message)
+    pub async fn send_message<S: Into<Vec<Message>>>(&self, message: S) -> crate::Result<String> {
+        self.send_message_full(message)
             .await
-            .map(|value| value.message.content.parts[0].to_owned())
+            .map(|value| value.choices[0].message.content.to_owned())
     }
 
     /// Sends a message with parent message id and conversation id for conversations.
@@ -156,26 +101,44 @@ impl ChatGPT {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn send_message_full<S: Into<String>>(
+    pub async fn send_message_full<S: Into<Vec<Message>>>(
         &self,
-        parent_message_id: Option<Uuid>,
-        conversation_id: Option<Uuid>,
         message: S,
     ) -> crate::Result<ConversationResponse> {
-        let mut stream = self
-            .acquire_response_stream(parent_message_id, conversation_id, message.into())
-            .await?;
-        let mut last: String = "null".to_owned();
+        //  let mut stream = self.acquire_response_stream(message.into()).await?;
 
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?.data;
-            if chunk == "[DONE]" {
-                break;
-            } else {
-                last = chunk;
-            }
-        }
-        serde_json::from_str(&last).map_err(crate::err::Error::from)
+        // while let Some(chunk) = stream.next().await {
+        // 	dbg!(&chunk);
+        //     let chunk = chunk?.data;
+        //     if chunk == "[DONE]" {
+        //         break;
+        //     } else {
+        // 		let data: ChatCompletionChunk = serde_json::from_str(&chunk)?;
+        // 		dbg!(&data);
+        // 		if let Some(choice) = &data.choices.get(0) {
+        // 			if let Some(content) = &choice.delta.content {
+        // 				dbg!(&content);
+        // 			}
+        // 		}
+        //     }
+        // }
+        let message = message.into();
+        let body = json!({
+            "model": "gpt-3.5-turbo",
+            "messages": message,
+            // "parent_message_id": parent_message_id.unwrap_or_else(Uuid::new_v4),
+        });
+        let resp = self
+            .client
+            .request(Method::POST, self.options.backend_api_url.clone())
+            .header("Content-Type", "application/json".to_owned())
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(&body)
+            .send()
+            .await?;
+        let resp = resp.text().await?;
+        let res: ConversationResponse = serde_json::from_str(&resp)?;
+        Ok(res)
     }
 
     /// Sends a message with full configuration and returns a stream of gradually finishing message
@@ -207,19 +170,16 @@ impl ChatGPT {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn send_message_streaming<S: Into<String>>(
+    pub async fn send_message_streaming<S: Into<Vec<Message>>>(
         &self,
-        parent_message_id: Option<Uuid>,
-        conversation_id: Option<Uuid>,
         message: S,
     ) -> crate::Result<impl Stream<Item = crate::Result<ResponsePart>>> {
-        let stream = self
-            .acquire_response_stream(parent_message_id, conversation_id, message.into())
-            .await?;
+        let stream = self.acquire_response_stream(message.into()).await?;
 
         let mut collector: String = String::with_capacity(256);
         Ok(stream.map(move |part| {
             let chunk = part?.data;
+            dbg!(&chunk);
             if chunk == "[DONE]" {
                 crate::Result::Ok(ResponsePart::Done(serde_json::from_str(&collector)?))
             } else {
@@ -229,54 +189,21 @@ impl ChatGPT {
         }))
     }
 
-    /// Begins a new scoped conversation
-    pub fn new_conversation(&self) -> ChatConversation {
-        ChatConversation {
-            conversation_id: None,
-            parent_message_id: None,
-        }
-    }
-
     async fn acquire_response_stream(
         &self,
-        parent_message_id: Option<Uuid>,
-        conversation_id: Option<Uuid>,
-        message: String,
+        messages: Vec<Message>,
     ) -> crate::Result<EventStream<impl Stream<Item = reqwest::Result<bytes::Bytes>>>> {
-        let mut body = json!({
-            "action": "next",
-            "messages": [
-                {
-                    "id": Uuid::new_v4(),
-                    "role": "user",
-                    "content": {
-                        "content_type": "text",
-                        "parts": [message]
-                    }
-                }
-            ],
-            "model": "text-davinci-002-render",
-            "parent_message_id": parent_message_id.unwrap_or_else(Uuid::new_v4),
+        let body = json!({
+            "model": "gpt-3.5-turbo",
+            "stream": true,
+            "messages": messages
+            // "parent_message_id": parent_message_id.unwrap_or_else(Uuid::new_v4),
         });
-        if let Some(id) = conversation_id {
-            body.as_object_mut()
-                .unwrap()
-                .insert("conversation_id".into(), serde_json::to_value(id).unwrap());
-        }
         Ok(self
             .client
-            .request(
-                Method::POST,
-                self.options
-                    .backend_api_url
-                    .join("conversation")
-                    .map_err(|err| crate::err::Error::ParsingError(err.to_string()))?,
-            )
-            .header("Authorization", format!("Bearer {}", self.access_token))
-            .header(
-                "Cookie",
-                format!("__Secure-next-auth.session-token={}", self.access_token),
-            )
+            .request(Method::POST, self.options.backend_api_url.clone())
+            .header("Content-Type", "application/json".to_owned())
+            .header("Authorization", format!("Bearer {}", self.api_key))
             .json(&body)
             .send()
             .await?
