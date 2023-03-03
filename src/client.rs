@@ -113,12 +113,11 @@ impl ChatGPT {
 		options: CompletionOptions,
     ) -> crate::Result<ConversationResponse> {
         let message = message.into();
-		let options_json = serde_json::to_value(options)?;
-        let mut params = json!({
-            "model": "gpt-3.5-turbo",
-            "messages": message,
-        });
-		let body = params.merge(options_json);
+		let mut body = serde_json::to_value(options)?;
+		
+
+		body["model"] = serde_json::Value::String(String::from("gpt-3.5-turbo"));
+		body["messages"] = serde_json::to_value(message)?;
         let resp = self
             .client
             .request(Method::POST, self.options.backend_api_url.clone())
@@ -127,7 +126,7 @@ impl ChatGPT {
             .json(&body)
             .send()
             .await?;
-        let resp = resp.text().await?;
+        let resp = dbg!(resp.text().await)?;
         let res: ConversationResponse = serde_json::from_str(&resp)?;
         Ok(res)
     }

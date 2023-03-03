@@ -32,7 +32,7 @@ pub mod test {
             content: "Write me a simple sorting algorithm in Rust".to_owned(),
         }];
         let client = ChatGPT::new(&token)?;
-        let response = client.send_message_full(messages).await?;
+        let response = client.send_message_full(messages, Default::default()).await?;
         println!("{:?}", response);
         Ok(())
     }
