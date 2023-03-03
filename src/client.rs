@@ -65,13 +65,16 @@ impl ChatGPT {
     ///
     /// Example:
     /// ```rust
+	/// # use chatgpt::types::Message;
     /// # use chatgpt::client::ChatGPT;
     /// # #[tokio::main]
     /// # async fn main() -> chatgpt::Result<()> {
-    /// # let mut client = ChatGPT::new(std::env::var("SESSION_TOKEN").unwrap())?;
-    /// # client.refresh_token().await?;
-    /// let message = "Write me a sorting algorithm in Rust.";
-    /// let response: String = client.send_message(message).await?;
+    /// # let mut client = ChatGPT::new(std::env::var("OPENAI_SK").unwrap())?;
+    /// let messages = vec![Message {
+    ///     role: "user".to_owned(),
+    ///     content: "Write me a simple sorting algorithm in Rust".to_owned(),
+    /// }];
+    /// let response: String = client.send_message(messages).await?;
     /// println!("{response}");
     /// # Ok(())
     /// # }
@@ -89,15 +92,18 @@ impl ChatGPT {
     ///
     /// Example:
     /// ```rust
+	/// # use chatgpt::types::Message;
     /// # use chatgpt::prelude::*;
     /// # use chatgpt::client::ChatGPT;
     /// # #[tokio::main]
     /// # async fn main() -> chatgpt::Result<()> {
-    /// # let mut client = ChatGPT::new(std::env::var("SESSION_TOKEN").unwrap())?;
-    /// # client.refresh_token().await?;
-    /// let message = "Write me a sorting algorithm in Rust.";
-    /// let response: ConversationResponse = client.send_message_full(None, Some(uuid::Uuid::new_v4()), message).await?;
-    /// println!("{response:?}");
+    /// # let mut client = ChatGPT::new(std::env::var("OPENAI_SK").unwrap())?;
+    /// # let messages = vec![Message {
+    /// #    role: "user".to_owned(),
+    /// #    content: "Write me a simple sorting algorithm in Rust".to_owned(),
+    /// # }];
+    /// # let response: ConversationResponse = client.send_message_full(messages).await?;
+    /// # println!("{response:?}");
     /// # Ok(())
     /// # }
     /// ```
@@ -105,28 +111,10 @@ impl ChatGPT {
         &self,
         message: S,
     ) -> crate::Result<ConversationResponse> {
-        //  let mut stream = self.acquire_response_stream(message.into()).await?;
-
-        // while let Some(chunk) = stream.next().await {
-        // 	dbg!(&chunk);
-        //     let chunk = chunk?.data;
-        //     if chunk == "[DONE]" {
-        //         break;
-        //     } else {
-        // 		let data: ChatCompletionChunk = serde_json::from_str(&chunk)?;
-        // 		dbg!(&data);
-        // 		if let Some(choice) = &data.choices.get(0) {
-        // 			if let Some(content) = &choice.delta.content {
-        // 				dbg!(&content);
-        // 			}
-        // 		}
-        //     }
-        // }
         let message = message.into();
         let body = json!({
             "model": "gpt-3.5-turbo",
             "messages": message,
-            // "parent_message_id": parent_message_id.unwrap_or_else(Uuid::new_v4),
         });
         let resp = self
             .client
@@ -145,25 +133,25 @@ impl ChatGPT {
     ///
     /// Example:
     /// ```rust
+	/// # use chatgpt::types::Message;
     /// # use chatgpt::types::ResponsePart;
     /// # use chatgpt::client::ChatGPT;
     /// # use futures_util::StreamExt;
     /// # #[tokio::main]
     /// # async fn main() -> chatgpt::Result<()> {
-    /// # let mut client = ChatGPT::new(std::env::var("SESSION_TOKEN").unwrap())?;
-    /// # client.refresh_token().await?;
-    /// let message = "Write me a sorting algorithm in Rust.";
-    /// let mut stream = client.send_message_streaming(None, None, message).await?;
+    /// # let mut client = ChatGPT::new(std::env::var("OPENAI_SK").unwrap())?;
+    /// let messages = vec![Message {
+    ///     role: "user".to_owned(),
+    ///     content: "Write me a simple sorting algorithm in Rust".to_owned(),
+    /// }];
+    /// let mut stream = client.send_message_streaming(messages).await?;
     /// while let Some(message) = stream.next().await {
     ///     match message? {
-    ///         ResponsePart::PartialData => {
-    ///             println!("Partial data received!")
-    ///         }
-    ///         ResponsePart::Processing(data) => {
+    ///         ResponsePart::Chunk(data) => {
     ///             println!("Got part of data: {data:?}");
     ///         }
-    ///         ResponsePart::Done(data) => {
-    ///             println!("Data processing finished! Response: {data:?}")
+    ///         ResponsePart::Done => {
+    ///             println!("Data processing finished! Response")
     ///         }
     ///     }
     /// }
@@ -176,15 +164,14 @@ impl ChatGPT {
     ) -> crate::Result<impl Stream<Item = crate::Result<ResponsePart>>> {
         let stream = self.acquire_response_stream(message.into()).await?;
 
-        let mut collector: String = String::with_capacity(256);
         Ok(stream.map(move |part| {
             let chunk = part?.data;
             dbg!(&chunk);
             if chunk == "[DONE]" {
-                crate::Result::Ok(ResponsePart::Done(serde_json::from_str(&collector)?))
+                crate::Result::Ok(ResponsePart::Done)
             } else {
-                collector = chunk;
-                crate::Result::Ok(ResponsePart::Processing(serde_json::from_str(&collector)?))
+				let data: ChatCompletionChunk = serde_json::from_str(&chunk)?;
+                crate::Result::Ok(ResponsePart::Chunk(data))
             }
         }))
     }

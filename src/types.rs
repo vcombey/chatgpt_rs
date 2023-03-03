@@ -70,9 +70,9 @@ pub enum Role {
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum ResponsePart {
     /// Got a chunk of response containing unfinished message response
-    Processing(ConversationResponse),
+    Chunk(ChatCompletionChunk),
     /// Got an indication that the final response was returned
-    Done(ConversationResponse),
+    Done,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
