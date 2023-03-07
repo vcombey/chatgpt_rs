@@ -28,4 +28,6 @@ pub enum Error {
     /// An error has occurred when processing events over stream
     #[error("An error occurred while iterating over stream: {0}")]
     StreamError(#[from] EventStreamError<reqwest::Error>),
+    #[error("An error occurred while processing request: {0}")]
+    ApiError(String),
 }
