@@ -116,7 +116,9 @@ impl ChatGPT {
 		let mut body = serde_json::to_value(options)?;
 		
 
-		body["model"] = serde_json::Value::String(String::from("gpt-3.5-turbo"));
+		if body.get("model").is_none() {
+			body["model"] = serde_json::Value::String(String::from("gpt-3.5-turbo"));
+		}
 		body["messages"] = serde_json::to_value(message)?;
         let resp = self
             .client
