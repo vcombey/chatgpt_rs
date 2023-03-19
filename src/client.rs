@@ -79,8 +79,8 @@ impl ChatGPT {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn send_message<S: Into<Vec<Message>>>(&self, message: S, options: CompletionOptions) -> crate::Result<String> {
-        self.send_message_full(message, options)
+    pub async fn send_message<S: Into<Vec<Message>>>(&self, message: S, options: CompletionOptions, org: String,) -> crate::Result<String> {
+        self.send_message_full(message, options, org)
             .await
             .map(|value| value.choices[0].message.content.to_owned())
     }
@@ -111,6 +111,7 @@ impl ChatGPT {
         &self,
         message: S,
 		options: CompletionOptions,
+		org: String,
     ) -> crate::Result<ConversationResponse> {
         let message = message.into();
 		let mut body = serde_json::to_value(options)?;
@@ -125,6 +126,7 @@ impl ChatGPT {
             .request(Method::POST, self.options.backend_api_url.clone())
             .header("Content-Type", "application/json".to_owned())
             .header("Authorization", format!("Bearer {}", self.api_key))
+			.header("OpenAI-Organization", org)
             .json(&body)
             .send()
             .await?;
