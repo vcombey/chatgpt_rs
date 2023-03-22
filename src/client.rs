@@ -113,7 +113,6 @@ impl ChatGPT {
             .eventsource();
         Ok(stream.map(move |part| {
             let chunk = part?.data;
-            dbg!(&chunk);
             if chunk == "[DONE]" {
                 crate::Result::Ok(ResponsePart::Done)
             } else {
