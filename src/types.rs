@@ -67,7 +67,7 @@ pub enum Role {
 }
 
 /// Part of a mapped response returned from the [`ChatGPT::send_message_streaming()`](`chatgpt::client::ChatGPT::send_message_streaming()`) method
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum ResponsePart {
     /// Got a chunk of response containing unfinished message response
     Chunk(ChatCompletionChunk),
