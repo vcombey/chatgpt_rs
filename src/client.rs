@@ -85,6 +85,43 @@ impl ChatGPT {
             .map(|value| value.choices[0].message.content.to_owned())
     }
 
+    pub async fn send_message_streaming<S: Into<Vec<Message>>>(
+        &self,
+        message: S,
+		options: CompletionOptions,
+		org: String,
+		    ) -> crate::Result<impl Stream<Item = crate::Result<ResponsePart>>> {
+        let message = message.into();
+		let mut body = serde_json::to_value(options)?;
+		
+
+		body["stream"] = serde_json::Value::Bool(true);
+		if body.get("model") == Some(&serde_json::Value::Null){
+			body["model"] = serde_json::Value::String(String::from("gpt-4"));
+		}
+		body["messages"] = serde_json::to_value(message)?;
+        let stream = self
+            .client
+            .request(Method::POST, self.options.backend_api_url.clone())
+            .header("Content-Type", "application/json".to_owned())
+            .header("Authorization", format!("Bearer {}", self.api_key))
+			.header("OpenAI-Organization", org)
+            .json(&body)
+            .send()
+            .await?
+            .bytes_stream()
+            .eventsource();
+        Ok(stream.map(move |part| {
+            let chunk = part?.data;
+            dbg!(&chunk);
+            if chunk == "[DONE]" {
+                crate::Result::Ok(ResponsePart::Done)
+            } else {
+				let data: ChatCompletionChunk = serde_json::from_str(&chunk)?;
+                crate::Result::Ok(ResponsePart::Chunk(data))
+            }
+        }))
+    }
     /// Sends a message with parent message id and conversation id for conversations.
     ///
     /// Note that usually it takes the AI around ~10-30 seconds to respond because of how the backend API is implemented.
@@ -117,7 +154,7 @@ impl ChatGPT {
 		let mut body = serde_json::to_value(options)?;
 		
 
-		if body.get("model").is_none() {
+		if body.get("model") == Some(&serde_json::Value::Null){
 			body["model"] = serde_json::Value::String(String::from("gpt-3.5-turbo"));
 		}
 		body["messages"] = serde_json::to_value(message)?;
@@ -133,74 +170,5 @@ impl ChatGPT {
         let resp = dbg!(resp.text().await)?;
         let res: ConversationResponse = serde_json::from_str(&resp).map_err(|_e| crate::err::Error::ApiError(resp))?;
         Ok(res)
-    }
-
-    /// Sends a message with full configuration and returns a stream of gradually finishing message
-    ///
-    /// Example:
-    /// ```rust
-	/// # use chatgpt::types::Message;
-    /// # use chatgpt::types::ResponsePart;
-    /// # use chatgpt::client::ChatGPT;
-    /// # use futures_util::StreamExt;
-    /// # #[tokio::main]
-    /// # async fn main() -> chatgpt::Result<()> {
-    /// # let mut client = ChatGPT::new(std::env::var("OPENAI_SK").unwrap())?;
-    /// let messages = vec![Message {
-    ///     role: "user".to_owned(),
-    ///     content: "Write me a simple sorting algorithm in Rust".to_owned(),
-    /// }];
-    /// let mut stream = client.send_message_streaming(messages).await?;
-    /// while let Some(message) = stream.next().await {
-    ///     match message? {
-    ///         ResponsePart::Chunk(data) => {
-    ///             println!("Got part of data: {data:?}");
-    ///         }
-    ///         ResponsePart::Done => {
-    ///             println!("Data processing finished! Response")
-    ///         }
-    ///     }
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn send_message_streaming<S: Into<Vec<Message>>>(
-        &self,
-        message: S,
-    ) -> crate::Result<impl Stream<Item = crate::Result<ResponsePart>>> {
-        let stream = self.acquire_response_stream(message.into()).await?;
-
-        Ok(stream.map(move |part| {
-            let chunk = part?.data;
-            dbg!(&chunk);
-            if chunk == "[DONE]" {
-                crate::Result::Ok(ResponsePart::Done)
-            } else {
-				let data: ChatCompletionChunk = serde_json::from_str(&chunk)?;
-                crate::Result::Ok(ResponsePart::Chunk(data))
-            }
-        }))
-    }
-
-    async fn acquire_response_stream(
-        &self,
-        messages: Vec<Message>,
-    ) -> crate::Result<EventStream<impl Stream<Item = reqwest::Result<bytes::Bytes>>>> {
-        let body = json!({
-            "model": "gpt-3.5-turbo",
-            "stream": true,
-            "messages": messages
-            // "parent_message_id": parent_message_id.unwrap_or_else(Uuid::new_v4),
-        });
-        Ok(self
-            .client
-            .request(Method::POST, self.options.backend_api_url.clone())
-            .header("Content-Type", "application/json".to_owned())
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&body)
-            .send()
-            .await?
-            .bytes_stream()
-            .eventsource())
     }
 }

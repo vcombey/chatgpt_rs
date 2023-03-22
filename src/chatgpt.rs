@@ -22,9 +22,9 @@ pub mod test {
         let token = std::env::var("OPENAI_SK").unwrap();
         let client = ChatGPT::new(&token).unwrap();
     }
-
     #[tokio::test]
-    async fn test_message() -> crate::Result<()> {
+    async fn test_message_streaming() -> crate::Result<()> {
+    let org = "org-xzE2hBner5ZwF3wAyvMytmsd".to_string();
         let token = std::env::var("OPENAI_SK").unwrap();
         // std::env::var("SESSION_TOKEN").unwrap();
         let messages = vec![Message {
@@ -32,25 +32,27 @@ pub mod test {
             content: "Write me a simple sorting algorithm in Rust".to_owned(),
         }];
         let client = ChatGPT::new(&token)?;
-        let response = client.send_message_full(messages, Default::default()).await?;
-        println!("{:?}", response);
-        Ok(())
-    }
-
+        let mut stream = client.send_message_streaming(messages, Default::default(), org).await?;
+		while let Some(chunk) = stream.next().await {
+			dbg!(&chunk);
+		}
+		panic!("panic");
+		Ok(())
+	}
     #[tokio::test]
-    async fn test_streaming() -> crate::Result<()> {
+    async fn test_message() -> crate::Result<()> {
+    let org = "org-xzE2hBner5ZwF3wAyvMytmsd".to_string();
         let token = std::env::var("OPENAI_SK").unwrap();
-        let client = ChatGPT::new(&token)?;
+        // std::env::var("SESSION_TOKEN").unwrap();
         let messages = vec![Message {
             role: "user".to_owned(),
             content: "Write me a simple sorting algorithm in Rust".to_owned(),
         }];
-        let mut stream = client.send_message_streaming(messages).await?;
-        while let Some(element) = stream.next().await {
-            let element = element?;
-            println!("{element:#?}")
-        }
+        let client = ChatGPT::new(&token)?;
+        let response = client.send_message_full(messages, Default::default(), org).await?;
+        println!("{:?}", response);
         Ok(())
     }
+
 
 }
