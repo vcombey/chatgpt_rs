@@ -1,6 +1,7 @@
 use core::f32;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use uuid::Uuid;
 
 /// A response that is received on the conversation endpoint
@@ -121,6 +122,9 @@ pub struct CompletionOptions {
     ///number
     ///Optional
     ///Defaults to 1
+    ///
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub functions: Option<Vec<Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub top_p: Option<f32>,
     ///
