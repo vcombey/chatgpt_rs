@@ -89,7 +89,13 @@ impl ChatGPT {
     ) -> crate::Result<String> {
         self.send_message_full(message, options, org)
             .await
-            .map(|value| value.choices[0].message.content.to_owned())
+            .map(|value| {
+                value.choices[0]
+                    .message
+                    .content
+                    .to_owned()
+                    .unwrap_or(String::new())
+            })
     }
 
     pub async fn send_message_streaming<S: Into<Vec<Message>>>(
