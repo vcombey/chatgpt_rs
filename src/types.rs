@@ -125,7 +125,7 @@ pub struct CompletionOptions {
     ///Defaults to 1
     ///
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub functions: Option<Value>,
+    pub functions: Option<Vec<Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub top_p: Option<f32>,
     ///
