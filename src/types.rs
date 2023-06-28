@@ -55,6 +55,7 @@ pub struct ConversationChoice {
 pub struct Message {
     pub content: String,
     pub role: String,
+    pub function_call: Option<String>,
 }
 
 /// Kind of sender
