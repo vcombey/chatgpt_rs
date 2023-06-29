@@ -97,6 +97,10 @@ pub struct DeltaChunk {
     pub content: Option<String>,
     role: Option<String>,
 }
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct FunctionCall {
+    pub name: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct CompletionOptions {
@@ -109,6 +113,9 @@ pub struct CompletionOptions {
     ///array
     ///Required
     pub model: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_call: Option<FunctionCall>,
     ///
     ///The messages to generate chat completions for, in the chat format.
     ///temperature
