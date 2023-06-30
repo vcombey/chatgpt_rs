@@ -94,10 +94,17 @@ pub struct ChoiceChunk {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DeltaChunk {
-    pub function_call: Option<Vec<Value>>,
+    pub function_call: Option<FunctionCallDelta>,
     pub content: Option<String>,
     role: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FunctionCallDelta {
+    pub name: Option<String>,
+    pub arguments: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct FunctionCall {
     pub name: String,
