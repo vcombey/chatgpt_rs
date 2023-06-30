@@ -94,6 +94,7 @@ pub struct ChoiceChunk {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DeltaChunk {
+    pub function_call: Option<String>,
     pub content: Option<String>,
     role: Option<String>,
 }
