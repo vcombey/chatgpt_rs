@@ -118,6 +118,8 @@ impl ChatGPT {
             .header("Content-Type", "application/json".to_owned())
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("OpenAI-Organization", org)
+            .header("HTTP-Referer", "https://spoke.app")
+            .header("X-Title", "spoke")
             .json(&body)
             .send()
             .await?
@@ -175,6 +177,8 @@ impl ChatGPT {
             .header("Content-Type", "application/json".to_owned())
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("OpenAI-Organization", org)
+            .header("HTTP-Referer", "https://spoke.app")
+            .header("X-Title", "spoke")
             .json(&body)
             .send()
             .await?;
