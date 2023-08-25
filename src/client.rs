@@ -181,7 +181,7 @@ impl ChatGPT {
             .json(&body)
             .send()
             .await?;
-        let resp = dbg!(resp.text().await)?;
+        let resp = resp.text().await?;
         let res: ConversationResponse = serde_json::from_str(&resp)
             .map_err(|e| crate::err::Error::ApiError(resp, format!("{}", e)))?;
         Ok(res)
