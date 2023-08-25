@@ -130,7 +130,6 @@ impl ChatGPT {
             if chunk == "[DONE]" {
                 crate::Result::Ok(ResponsePart::Done)
             } else {
-                dbg!(&chunk);
                 let data: ChatCompletionChunk = serde_json::from_str(&chunk)?;
                 crate::Result::Ok(ResponsePart::Chunk(data))
             }
