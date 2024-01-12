@@ -30,7 +30,7 @@ impl ClientOptions {
 impl Default for ClientOptions {
     fn default() -> Self {
         Self {
-            backend_api_url: Url::from_str("https://spoke.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2023-09-01-preview").unwrap(),
+            backend_api_url: Url::from_str("https://spoke.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2023-07-01-preview").unwrap(),
 
         }
     }
