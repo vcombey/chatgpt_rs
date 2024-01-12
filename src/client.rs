@@ -117,8 +117,9 @@ impl ChatGPT {
             .client
             .request(Method::POST, self.options.backend_api_url.clone())
             .header("Content-Type", "application/json".to_owned())
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Authorization", format!("Bearer {}", self.api_key.clone()))
             .header("OpenAI-Organization", org)
+            .header("api-key", self.api_key.clone())
             .header("HTTP-Referer", "https://spoke.app")
             .header("X-Title", "spoke")
             .json(&body)
