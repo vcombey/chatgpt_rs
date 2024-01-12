@@ -30,7 +30,7 @@ impl ClientOptions {
 impl Default for ClientOptions {
     fn default() -> Self {
         Self {
-            backend_api_url: Url::from_str("https://spoke.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2023-07-01-preview").unwrap(),
+            backend_api_url: Url::from_str("https://spoke.openai.azure.com/openai/deployments/gpt4/chat/completions?api-version=2023-09-01-preview").unwrap(),
 
         }
     }
@@ -178,6 +178,7 @@ impl ChatGPT {
             .header("Content-Type", "application/json".to_owned())
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("OpenAI-Organization", org)
+            .header("api-key", self.api_key.clone())
             .header("HTTP-Referer", "https://spoke.app")
             .header("X-Title", "spoke")
             .json(&body)
