@@ -121,9 +121,6 @@ pub struct CompletionOptions {
     ///array
     ///Required
     pub model: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub function_call: Option<FunctionCall>,
     ///
     ///The messages to generate chat completions for, in the chat format.
     ///temperature
@@ -134,15 +131,6 @@ pub struct CompletionOptions {
     ///What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
-    ///
-    ///We generally recommend altering this or top_p but not both.
-    ///top_p
-    ///number
-    ///Optional
-    ///Defaults to 1
-    ///
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub functions: Option<Vec<Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub top_p: Option<f32>,
     ///
@@ -206,4 +194,44 @@ pub struct CompletionOptions {
     ///A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. Learn more.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user: Option<isize>,
+    /// A list of tools the model may call.
+    ///
+    /// Currently, only functions are supported as a tool.
+    /// Use this to provide a list of functions the model may generate JSON inputs for.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<Tool>>,
+    /// Deprecated in favor of `tool_choice` (TODO).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[deprecated]
+    pub function_call: Option<FunctionCall>,
+    /// Deprecated in favor of `tools`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[deprecated]
+    pub functions: Option<Vec<Value>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct Tool {
+    /// The type of the tool. Currently, only function is supported.
+    pub r#type: String,
+    pub function: Function,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct Function {
+    /// A description of what the function does,
+    /// used by the model to choose when and how to call the function.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The name of the function to be called.
+    ///
+    /// Must be a-z, A-Z, 0-9, or contain underscores and dashes, with a maximum length of 64.
+    pub name: String,
+    /// The parameters the functions accepts, described as a JSON Schema object.
+    ///
+    /// See the guide for examples,
+    /// and the JSON Schema reference for documentation about the format.
+    /// Omitting parameters defines a function with an empty parameter list.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<Value>,
 }
