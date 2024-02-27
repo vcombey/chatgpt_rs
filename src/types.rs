@@ -71,7 +71,7 @@ pub struct ToolCall {
     /// The type of the tool. Currently, only `function` is supported.
     pub r#type: String,
     /// The function that the model called.
-    pub function: Value,
+    pub function: ToolCallFunction,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -122,6 +122,7 @@ pub struct ChoiceChunk {
 pub struct DeltaChunk {
     pub function_call: Option<FunctionCallDelta>,
     pub content: Option<String>,
+    pub tool_calls: Option<Vec<ToolCall>>,
     role: Option<String>,
 }
 

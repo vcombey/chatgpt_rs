@@ -30,6 +30,7 @@ pub mod test {
             role: "user".to_owned(),
             content: Some("Write me a simple sorting algorithm in Rust".to_owned()),
             function_call: None,
+            tool_calls: None,
         }];
         let client = ChatGPT::new(&token)?;
         let mut stream = client
@@ -50,6 +51,7 @@ pub mod test {
             role: "user".to_owned(),
             content: Some("Write me a simple sorting algorithm in Rust".to_owned()),
             function_call: None,
+            tool_calls: None,
         }];
         let client = ChatGPT::new(&token)?;
         let response = client
