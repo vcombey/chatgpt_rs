@@ -60,7 +60,6 @@ pub struct Message {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_calls: Option<Vec<ToolCall>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[deprecated]
     pub function_call: Option<Value>,
 }
 
@@ -234,11 +233,9 @@ pub struct CompletionOptions {
     pub tools: Option<Vec<Tool>>,
     /// Deprecated in favor of `tool_choice` (TODO).
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[deprecated]
     pub function_call: Option<FunctionCall>,
     /// Deprecated in favor of `tools`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[deprecated]
     pub functions: Option<Vec<Value>>,
 }
 
